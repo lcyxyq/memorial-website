@@ -6,6 +6,8 @@
     <title>缅怀纪念 - 永远的回忆</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- qrcode.js 用于生成分享二维码 -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
     <!-- Supabase SDK (UMD 2.49.4 - 完整浏览器兼容) -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.js"></script>
 </head>
@@ -54,6 +56,39 @@
             <p class="footer-quote">"那些我们爱过的人，永远不会真正离开我们"</p>
         </div>
     </footer>
+
+    <!-- 分享浮动按钮 -->
+    <button class="share-fab" id="shareFab" title="分享给朋友">
+        <i class="fas fa-share-alt"></i>
+    </button>
+
+    <!-- 分享弹窗 -->
+    <div class="modal" id="shareModal">
+        <div class="modal-content share-modal-content">
+            <span class="close-modal" id="closeShareModal">&times;</span>
+            <h3><i class="fas fa-share-alt"></i> 分享给朋友</h3>
+            <p class="share-desc">扫描二维码或复制链接，分享这份珍贵的回忆</p>
+            <div class="share-qrcode-wrap">
+                <div id="shareQrcode"></div>
+                <p class="share-qrcode-tip">长按二维码保存图片</p>
+            </div>
+            <div class="share-link-wrap">
+                <input type="text" id="shareLinkInput" readonly>
+                <button class="btn-copy-link" id="btnCopyLink"><i class="fas fa-copy"></i> 复制链接</button>
+            </div>
+            <div class="share-actions">
+                <button class="btn-action btn-share-wechat" id="btnShareWechat">
+                    <i class="fab fa-weixin"></i> 微信
+                </button>
+                <button class="btn-action btn-share-weibo" id="btnShareWeibo">
+                    <i class="fab fa-weibo"></i> 微博
+                </button>
+                <button class="btn-action btn-share-qq" id="btnShareQQ">
+                    <i class="fab fa-qq"></i> QQ
+                </button>
+            </div>
+        </div>
+    </div>
 
     <!-- 照片详情弹窗 -->
     <div class="modal" id="detailModal">

@@ -695,4 +695,137 @@ document.addEventListener('DOMContentLoaded', () => {
     if (closeBtn) closeBtn.addEventListener('click', closeCommentModal);
     const modal = document.getElementById('commentModal');
     if (modal) modal.addEventListener('click', e => { if (e.target === modal) closeCommentModal(); });
+
+    // ========================================
+    // 分享功能初始化
+    // ========================================
+    initShareFeature();
 });
+
+// ========================================
+// 分享功能
+// ========================================
+
+function initShareFeature() {
+    const shareFab = document.getElementById('shareFab');
+    const shareModal = document.getElementById('shareModal');
+    const closeShareModal = document.getElementById('closeShareModal');
+    const shareLinkInput = document.getElementById('shareLinkInput');
+    const btnCopyLink = document.getElementById('btnCopyLink');
+    const btnShareWechat = document.getElementById('btnShareWechat');
+    const btnShareWeibo = document.getElementById('btnShareWeibo');
+    const btnShareQQ = document.getElementById('btnShareQQ');
+
+    if (!shareFab || !shareModal) return;
+
+    // 获取当前页面URL
+    const currentUrl = window.location.href;
+
+    // 设置分享链接
+    if (shareLinkInput) {
+        shareLinkInput.value = currentUrl;
+    }
+
+    // 生成二维码
+    function generateQRCode() {
+        const qrcodeContainer = document.getElementById('shareQrcode');
+        if (!qrcodeContainer) return;
+
+        // 清空容器
+        qrcodeContainer.innerHTML = '';
+
+        // 检查 QRCode 是否可用
+        if (typeof QRCode === 'undefined') {
+            qrcodeContainer.innerHTML = '<p style="color:#666;">二维码生成库加载失败</p>';
+            return;
+        }
+
+        // 生成二维码
+        try {
+            new QRCode(qrcodeContainer, {
+                text: currentUrl,
+                width: 200,
+                height: 200,
+                colorDark: '#000000',
+                colorLight: '#ffffff',
+                correctLevel: 3  // 3=H, 2=Q, 1=M, 0=L
+            });
+        } catch (err) {
+            console.error('生成二维码失败:', err);
+            qrcodeContainer.innerHTML = '<p style="color:#666;">生成二维码失败</p>';
+        }
+    }
+
+    // 打开分享弹窗
+    shareFab.addEventListener('click', () => {
+        shareModal.classList.add('active');
+        // 生成二维码
+        setTimeout(() => {
+            generateQRCode();
+        }, 100);
+    });
+
+    // 关闭分享弹窗
+    if (closeShareModal) {
+        closeShareModal.addEventListener('click', () => {
+            shareModal.classList.remove('active');
+        });
+    }
+
+    // 点击弹窗背景关闭
+    shareModal.addEventListener('click', (e) => {
+        if (e.target === shareModal) {
+            shareModal.classList.remove('active');
+        }
+    });
+
+    // 复制链接
+    if (btnCopyLink) {
+        btnCopyLink.addEventListener('click', async () => {
+            try {
+                await navigator.clipboard.writeText(currentUrl);
+                btnCopyLink.innerHTML = '<i class="fas fa-check"></i> 已复制';
+                btnCopyLink.classList.add('copied');
+                setTimeout(() => {
+                    btnCopyLink.innerHTML = '<i class="fas fa-copy"></i> 复制链接';
+                    btnCopyLink.classList.remove('copied');
+                }, 2000);
+            } catch (err) {
+                // 降级方案
+                shareLinkInput.select();
+                document.execCommand('copy');
+                btnCopyLink.innerHTML = '<i class="fas fa-check"></i> 已复制';
+                btnCopyLink.classList.add('copied');
+                setTimeout(() => {
+                    btnCopyLink.innerHTML = '<i class="fas fa-copy"></i> 复制链接';
+                    btnCopyLink.classList.remove('copied');
+                }, 2000);
+            }
+        });
+    }
+
+    // 微信分享（打开微信网页版或显示提示）
+    if (btnShareWechat) {
+        btnShareWechat.addEventListener('click', () => {
+            // 在移动设备上，可以尝试调用微信分享API
+            // 这里提供一个通用方案：复制链接并提示用户
+            alert('请截图保存二维码，或复制链接后打开微信分享');
+        });
+    }
+
+    // 微博分享
+    if (btnShareWeibo) {
+        btnShareWeibo.addEventListener('click', () => {
+            const weiboUrl = `https://service.weibo.com/share/share.php?url=${encodeURIComponent(currentUrl)}&title=${encodeURIComponent('缅怀纪念 - 永远的回忆')}`;
+            window.open(weiboUrl, '_blank', 'width=600,height=400');
+        });
+    }
+
+    // QQ分享
+    if (btnShareQQ) {
+        btnShareQQ.addEventListener('click', () => {
+            const qqUrl = `https://connect.qq.com/widget/shareqq/index.html?url=${encodeURIComponent(currentUrl)}&title=${encodeURIComponent('缅怀纪念 - 永远的回忆')}`;
+            window.open(qqUrl, '_blank', 'width=600,height=400');
+        });
+    }
+}
