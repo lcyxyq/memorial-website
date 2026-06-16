@@ -1,0 +1,486 @@
+/**
+ * 缅怀纪念网站 - 主逻辑（Supabase 版）
+ * 后端：Supabase（国外免费 BaaS，GitHub 一键注册）
+ */
+
+// ========================================
+// 数据管理模块
+// ========================================
+
+class DataManager {
+    constructor() {
+        this.sb = supabase;
+    }
+
+    // ── 照片 ──
+
+    async getAllPhotos(skip = 0, limit = 20) {
+        const { data, error } = await this.sb
+            .from('photos')
+            .select('*, comments(count)')
+            .order('created_at', { ascending: false })
+            .range(skip, skip + limit - 1);
+        if (error) throw error;
+        return data.map(this._photoRow);
+    }
+
+    async getPhotoCount() {
+        const { count, error } = await this.sb
+            .from('photos')
+            .select('*', { count: 'exact', head: true });
+        if (error) throw error;
+        return count;
+    }
+
+    async getPhotoById(id) {
+        const { data, error } = await this.sb
+            .from('photos')
+            .select('*, comments(count)')
+            .eq('id', id)
+            .single();
+        if (error) throw error;
+        return this._photoRow(data);
+    }
+
+    async getPhotosByComments(skip = 0, limit = 20) {
+        // 先查所有照片的留言数再排序（Supabase 没有 join count sort，用 RPC 或两步）
+        const { data, error } = await this.sb
+            .from('photos')
+            .select('*, comments(count)')
+            .order('created_at', { ascending: false });
+        if (error) throw error;
+        const sorted = data
+            .map(this._photoRow)
+            .sort((a, b) => (b.commentCount || 0) - (a.commentCount || 0));
+        return sorted.slice(skip, skip + limit);
+    }
+
+    async addPhoto(photoData, imageFile) {
+        // 1. 压缩图片
+        const blob = await compressImage(imageFile, 1200, 0.85);
+        const ext = imageFile.name.split('.').pop() || 'jpg';
+        const filePath = `memorial/${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`;
+
+        // 2. 上传到 Supabase Storage
+        const { error: uploadErr } = await this.sb
+            .storage
+            .from('photos')
+            .upload(filePath, blob, { contentType: 'image/jpeg', upsert: false });
+        if (uploadErr) throw uploadErr;
+
+        // 3. 获取公开 URL
+        const { data: urlData } = this.sb.storage.from('photos').getPublicUrl(filePath);
+        const photoUrl = urlData.publicUrl;
+
+        // 4. 写入 photos 表
+        const { data, error } = await this.sb
+            .from('photos')
+            .insert([{
+                name: photoData.name,
+                relation: photoData.relation || '',
+                message: photoData.message || '',
+                photo_desc: photoData.photoDesc || '',
+                photo_url: photoUrl,
+                storage_path: filePath
+            }])
+            .select()
+            .single();
+        if (error) throw error;
+        return this._photoRow(data);
+    }
+
+    async addMultiplePhotos(photoData, imageFiles, onProgress) {
+        const results = [];
+        for (let i = 0; i < imageFiles.length; i++) {
+            if (onProgress) onProgress(i + 1, imageFiles.length);
+            const r = await this.addPhoto(photoData, imageFiles[i]);
+            results.push(r);
+        }
+        return results;
+    }
+
+    // ── 留言 ──
+
+    async addComment(photoId, commentData) {
+        const { data, error } = await this.sb
+            .from('comments')
+            .insert([{
+                photo_id: photoId,
+                name: commentData.name,
+                text: commentData.text
+            }])
+            .select()
+            .single();
+        if (error) throw error;
+        return {
+            id: data.id,
+            name: data.name,
+            text: data.text,
+            timestamp: data.created_at
+        };
+    }
+
+    async getComments(photoId) {
+        const { data, error } = await this.sb
+            .from('comments')
+            .select('*')
+            .eq('photo_id', photoId)
+            .order('created_at', { ascending: true });
+        if (error) throw error;
+        return data.map(c => ({
+            id: c.id,
+            name: c.name,
+            text: c.text,
+            timestamp: c.created_at
+        }));
+    }
+
+    // ── 辅助 ──
+
+    _photoRow(row) {
+        const commentCount = row.comments
+            ? (Array.isArray(row.comments) ? row.comments.length : (row.comments[0]?.count ?? 0))
+            : 0;
+        return {
+            id: row.id,
+            name: row.name || '',
+            relation: row.relation || '',
+            message: row.message || '',
+            photoDesc: row.photo_desc || '',
+            photoUrl: row.photo_url || '',
+            commentCount,
+            timestamp: row.created_at
+        };
+    }
+}
+
+const dataManager = new DataManager();
+
+// ========================================
+// 图片压缩
+// ========================================
+
+function compressImage(file, maxWidth = 800, quality = 0.8) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (e) => {
+            const img = new Image();
+            img.src = e.target.result;
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                let w = img.width, h = img.height;
+                if (w > maxWidth) { h = (h * maxWidth) / w; w = maxWidth; }
+                canvas.width = w; canvas.height = h;
+                canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                canvas.toBlob(blob => resolve(blob), 'image/jpeg', quality);
+            };
+            img.onerror = reject;
+        };
+        reader.onerror = reject;
+    });
+}
+
+// ========================================
+// 照片墙
+// ========================================
+
+class PhotoWall {
+    constructor() {
+        this.container = document.getElementById('photoWall');
+        this.loadMoreBtn = document.getElementById('loadMore');
+        this.pageSize = 20;
+        this.skip = 0;
+        this.allPhotos = [];
+        this.loading = false;
+        this.filter = 'all';
+
+        if (this.loadMoreBtn) {
+            this.loadMoreBtn.addEventListener('click', () => this.loadMore());
+        }
+        this.init();
+    }
+
+    async init() { await this.load(); }
+
+    async load() {
+        if (!this.container || this.loading) return;
+        this.loading = true;
+        try {
+            let photos;
+            if (this.filter === 'most-comments') {
+                photos = await dataManager.getPhotosByComments(this.skip, this.pageSize);
+            } else {
+                photos = await dataManager.getAllPhotos(this.skip, this.pageSize);
+            }
+            this.allPhotos = this.allPhotos.concat(photos);
+            this.render();
+
+            const total = await dataManager.getPhotoCount();
+            if (this.loadMoreBtn) {
+                this.loadMoreBtn.style.display = this.allPhotos.length >= total ? 'none' : 'block';
+            }
+        } catch (err) {
+            console.error('加载失败:', err);
+            this.container.innerHTML = `
+                <div class="no-photos" style="text-align:center;padding:3rem;">
+                    <i class="fas fa-exclamation-triangle" style="font-size:3rem;opacity:.3;color:#e74c3c;margin-bottom:1rem;"></i>
+                    <h3 style="opacity:.7;">加载失败</h3>
+                    <p style="opacity:.5;margin-top:.5rem;">请检查 Supabase 配置</p>
+                    <button onclick="location.reload()" style="margin-top:1rem;padding:.8rem 2rem;background:var(--accent-color);color:#fff;border:none;border-radius:25px;cursor:pointer;">重新加载</button>
+                </div>`;
+        } finally {
+            this.loading = false;
+        }
+    }
+
+    render() {
+        if (!this.container) return;
+        this.container.innerHTML = '';
+
+        if (!this.allPhotos.length) {
+            this.container.innerHTML = `
+                <div class="no-photos" style="text-align:center;padding:3rem;">
+                    <i class="fas fa-images" style="font-size:4rem;opacity:.3;margin-bottom:1rem;"></i>
+                    <h3 style="opacity:.7;">还没有回忆分享</h3>
+                    <p style="opacity:.5;margin-top:.5rem;">成为第一个分享回忆的人吧</p>
+                    <a href="register.html" style="display:inline-block;margin-top:1rem;padding:.8rem 2rem;background:var(--accent-color);color:#fff;text-decoration:none;border-radius:25px;">立即分享</a>
+                </div>`;
+            return;
+        }
+        this.allPhotos.forEach(p => this.container.appendChild(this._card(p)));
+    }
+
+    _card(photo) {
+        const el = document.createElement('div');
+        el.className = 'photo-card';
+        const timeAgo = this._timeAgo(photo.timestamp);
+        const name = esc(photo.name);
+        el.innerHTML = `
+            <img src="${photo.photoUrl}" alt="${name}" loading="lazy"
+                 onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgZmlsbD0iIzJjM2U1MCIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkeT0iLjNlbSIgZmlsbD0iI2VjZjBmMSIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMjAiIHRleHQtYW5jaG9yPSJtaWRkbGUiPuWbvueJh+WKoOi9veWksei0pTwvdGV4dD48L3N2Zz4='">
+            <div class="photo-info">
+                <h4><i class="fas fa-user"></i> ${name}</h4>
+                ${photo.relation ? `<p><i class="fas fa-heart"></i> ${esc(photo.relation)}</p>` : ''}
+                ${photo.message ? `<p class="photo-message">${esc(photo.message).slice(0,50)}${photo.message.length>50?'...':''}</p>` : ''}
+                <div class="photo-meta">
+                    <span><i class="far fa-clock"></i> ${timeAgo}</span>
+                    <span><i class="far fa-comment"></i> ${photo.commentCount||0} 条留言</span>
+                </div>
+                <button class="btn-comment"><i class="far fa-comment"></i> 留言</button>
+            </div>`;
+        el.querySelector('.btn-comment').addEventListener('click', () => openCommentModal(photo.id));
+        return el;
+    }
+
+    _timeAgo(ts) {
+        if (!ts) return '';
+        const diff = Math.floor((Date.now() - new Date(ts)) / 1000);
+        if (diff < 60) return '刚刚';
+        if (diff < 3600) return `${Math.floor(diff/60)} 分钟前`;
+        if (diff < 86400) return `${Math.floor(diff/3600)} 小时前`;
+        if (diff < 604800) return `${Math.floor(diff/86400)} 天前`;
+        return new Date(ts).toLocaleDateString('zh-CN');
+    }
+
+    loadMore() { this.skip += this.pageSize; this.load(); }
+
+    async refresh() { this.allPhotos = []; this.skip = 0; await this.load(); }
+
+    async setFilter(f) { this.filter = f; this.allPhotos = []; this.skip = 0; await this.load(); }
+}
+
+function esc(t) { if (!t) return ''; const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
+
+// ========================================
+// 留言弹窗
+// ========================================
+
+let currentPhotoId = null;
+
+async function openCommentModal(photoId) {
+    currentPhotoId = photoId;
+    const modal = document.getElementById('commentModal');
+    try {
+        const photo = await dataManager.getPhotoById(photoId);
+        if (!photo) return;
+        document.getElementById('modalPhotoPreview').innerHTML = `<img src="${photo.photoUrl}" alt="" onerror="this.style.display='none'">`;
+        document.getElementById('commentsList').innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i></div>';
+        modal.classList.add('active');
+        await renderComments(photoId);
+    } catch (e) { console.error(e); alert('加载失败'); }
+}
+
+function closeCommentModal() {
+    document.getElementById('commentModal').classList.remove('active');
+    currentPhotoId = null;
+}
+
+async function renderComments(photoId) {
+    const list = document.getElementById('commentsList');
+    try {
+        const comments = await dataManager.getComments(photoId);
+        if (!comments.length) { list.innerHTML = '<p style="text-align:center;opacity:.6;">还没有留言</p>'; return; }
+        list.innerHTML = comments.map(c => `
+            <div class="comment-item">
+                <div class="comment-author"><i class="fas fa-user"></i> ${esc(c.name)}</div>
+                <div class="comment-text">${esc(c.text)}</div>
+                <div class="comment-time"><i class="far fa-clock"></i> ${new Date(c.timestamp).toLocaleString('zh-CN')}</div>
+            </div>`).join('');
+    } catch { list.innerHTML = '<p style="text-align:center;color:#e74c3c;">加载留言失败</p>'; }
+}
+
+// ========================================
+// 上传表单
+// ========================================
+
+class UploadForm {
+    constructor() {
+        this.form = document.getElementById('registerForm');
+        this.photoInput = document.getElementById('photoInput');
+        this.uploadArea = document.getElementById('uploadArea');
+        this.previewGrid = document.getElementById('previewGrid');
+        this.files = [];
+        if (!this.form) return;
+        this._bind();
+    }
+
+    _bind() {
+        // 点击上传
+        this.uploadArea.addEventListener('click', () => this.photoInput.click());
+
+        // 拖拽
+        this.uploadArea.addEventListener('dragover', e => {
+            e.preventDefault();
+            this.uploadArea.style.borderColor = 'var(--accent-color)';
+        });
+        this.uploadArea.addEventListener('dragleave', () => {
+            this.uploadArea.style.borderColor = 'var(--border-color)';
+        });
+        this.uploadArea.addEventListener('drop', e => {
+            e.preventDefault();
+            this.uploadArea.style.borderColor = 'var(--border-color)';
+            const imgs = [...e.dataTransfer.files].filter(f => f.type.startsWith('image/'));
+            this.files.push(...imgs);
+            this._preview();
+        });
+
+        // 文件选择
+        this.photoInput.addEventListener('change', e => {
+            this.files.push(...e.target.files);
+            this._preview();
+        });
+
+        // 提交
+        this.form.addEventListener('submit', e => { e.preventDefault(); this._submit(); });
+    }
+
+    _preview() {
+        this.previewGrid.innerHTML = '';
+        this.files.forEach((f, i) => {
+            const reader = new FileReader();
+            reader.onload = e => {
+                const d = document.createElement('div');
+                d.className = 'preview-item';
+                d.innerHTML = `<img src="${e.target.result}" alt="预览"><button type="button" class="remove-btn" data-i="${i}"><i class="fas fa-times"></i></button>`;
+                this.previewGrid.appendChild(d);
+                d.querySelector('.remove-btn').addEventListener('click', ev => {
+                    ev.stopPropagation();
+                    this.files.splice(parseInt(ev.target.closest('.remove-btn').dataset.i), 1);
+                    this._preview();
+                });
+            };
+            reader.readAsDataURL(f);
+        });
+    }
+
+    async _submit() {
+        if (!this.files.length) { alert('请至少上传一张照片'); return; }
+        const name = document.getElementById('name').value.trim();
+        if (!name) { alert('请填写姓名'); return; }
+
+        const relation = document.getElementById('relation').value;
+        const message = document.getElementById('message').value.trim();
+        const photoDesc = document.getElementById('photoDesc').value.trim();
+
+        const btn = document.getElementById('submitBtn');
+        const bar = document.getElementById('uploadProgress');
+        const fill = document.getElementById('progressFill');
+        const txt = document.getElementById('progressText');
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 上传中...';
+        bar.style.display = 'block';
+        fill.style.width = '0%';
+
+        try {
+            await dataManager.addMultiplePhotos(
+                { name, relation, message, photoDesc },
+                this.files,
+                (cur, total) => {
+                    fill.style.width = Math.round(cur / total * 100) + '%';
+                    txt.textContent = `正在上传第 ${cur}/${total} 张照片...`;
+                }
+            );
+            fill.style.width = '100%';
+            txt.textContent = '上传完成！';
+            setTimeout(() => {
+                this.form.style.display = 'none';
+                document.getElementById('successMessage').style.display = 'block';
+            }, 500);
+        } catch (err) {
+            console.error(err);
+            alert('上传失败：' + (err.message || '请重试'));
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-paper-plane"></i> 提交回忆';
+            bar.style.display = 'none';
+        }
+    }
+}
+
+// ========================================
+// 初始化
+// ========================================
+
+document.addEventListener('DOMContentLoaded', () => {
+    if (document.getElementById('photoWall')) window.photoWall = new PhotoWall();
+    if (document.getElementById('registerForm')) new UploadForm();
+
+    // 筛选
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            if (window.photoWall) {
+                const f = btn.dataset.filter;
+                await window.photoWall.setFilter(f === 'recent' ? 'all' : f);
+            }
+        });
+    });
+
+    // 留言提交
+    const commentForm = document.getElementById('commentForm');
+    if (commentForm) {
+        commentForm.addEventListener('submit', async e => {
+            e.preventDefault();
+            const name = document.getElementById('commentName').value.trim();
+            const text = document.getElementById('commentText').value.trim();
+            if (!name || !text) { alert('请填写完整信息'); return; }
+            const btn = commentForm.querySelector('.btn-submit');
+            btn.disabled = true; btn.textContent = '发送中...';
+            try {
+                await dataManager.addComment(currentPhotoId, { name, text });
+                commentForm.reset();
+                await renderComments(currentPhotoId);
+                if (window.photoWall) await window.photoWall.refresh();
+            } catch (err) { console.error(err); alert('留言失败'); }
+            finally { btn.disabled = false; btn.textContent = '发送祝福'; }
+        });
+    }
+
+    // 关闭弹窗
+    const closeBtn = document.querySelector('.close-modal');
+    if (closeBtn) closeBtn.addEventListener('click', closeCommentModal);
+    const modal = document.getElementById('commentModal');
+    if (modal) modal.addEventListener('click', e => { if (e.target === modal) closeCommentModal(); });
+});
