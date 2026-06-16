@@ -55,6 +55,67 @@
         </div>
     </footer>
 
+    <!-- 照片详情弹窗 -->
+    <div class="modal" id="detailModal">
+        <div class="modal-content detail-modal-content">
+            <span class="close-modal" id="closeDetailModal">&times;</span>
+            <div class="detail-photo-wrap">
+                <img id="detailPhotoImg" src="" alt="">
+            </div>
+            <div class="detail-info" id="detailInfo">
+                <!-- 动态填充 -->
+            </div>
+            <div class="detail-actions">
+                <button class="btn-action btn-edit" id="btnEditPhoto"><i class="fas fa-edit"></i> 编辑</button>
+                <button class="btn-action btn-delete" id="btnDeletePhoto"><i class="fas fa-trash-alt"></i> 删除</button>
+                <button class="btn-action btn-comment-open" id="btnOpenComment"><i class="far fa-comment"></i> 留言</button>
+            </div>
+            <!-- 编辑表单（默认隐藏） -->
+            <div class="edit-form-wrap" id="editFormWrap" style="display:none;">
+                <h4><i class="fas fa-edit"></i> 编辑照片信息</h4>
+                <form id="editForm">
+                    <div class="form-group">
+                        <label>姓名</label>
+                        <input type="text" id="editName" required>
+                    </div>
+                    <div class="form-group">
+                        <label>与逝者关系</label>
+                        <select id="editRelation">
+                            <option value="">请选择</option>
+                            <option value="家人">家人</option>
+                            <option value="亲戚">亲戚</option>
+                            <option value="朋友">朋友</option>
+                            <option value="同事">同事</option>
+                            <option value="同学">同学</option>
+                            <option value="其他">其他</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>留言祝福</label>
+                        <textarea id="editMessage" rows="3"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>照片描述</label>
+                        <textarea id="editPhotoDesc" rows="3"></textarea>
+                    </div>
+                    <div class="edit-form-actions">
+                        <button type="submit" class="btn-action btn-save"><i class="fas fa-check"></i> 保存</button>
+                        <button type="button" class="btn-action btn-cancel" id="btnCancelEdit"><i class="fas fa-times"></i> 取消</button>
+                    </div>
+                </form>
+            </div>
+            <!-- 删除确认 -->
+            <div class="delete-confirm-wrap" id="deleteConfirmWrap" style="display:none;">
+                <h4><i class="fas fa-exclamation-triangle"></i> 确认删除</h4>
+                <p>删除后无法恢复，确定要删除这张照片吗？</p>
+                <div class="delete-confirm-actions">
+                    <button class="btn-action btn-confirm-delete" id="btnConfirmDelete"><i class="fas fa-trash-alt"></i> 确认删除</button>
+                    <button class="btn-action btn-cancel-delete" id="btnCancelDelete"><i class="fas fa-times"></i> 取消</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- 留言弹窗 -->
     <div class="modal" id="commentModal">
         <div class="modal-content">

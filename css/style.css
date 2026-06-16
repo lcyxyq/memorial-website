@@ -686,6 +686,254 @@ body {
     transform: none !important;
 }
 
+/* ========================================
+   照片详情弹窗
+   ======================================== */
+
+.detail-modal-content {
+    max-width: 700px;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.detail-photo-wrap {
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+    background: rgba(0,0,0,0.3);
+}
+
+.detail-photo-wrap img {
+    width: 100%;
+    height: auto;
+    display: block;
+    max-height: 60vh;
+    object-fit: contain;
+}
+
+.detail-info {
+    margin-bottom: 1.5rem;
+}
+
+.detail-name {
+    font-size: 1.2rem;
+    margin-bottom: 0.5rem;
+}
+
+.detail-name i {
+    color: var(--accent-color);
+    margin-right: 6px;
+}
+
+.detail-relation {
+    opacity: 0.8;
+    margin-bottom: 0.5rem;
+}
+
+.detail-relation i {
+    color: var(--accent-color);
+    margin-right: 6px;
+}
+
+.detail-desc {
+    background: rgba(255,255,255,0.05);
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 0.8rem;
+    border-left: 3px solid var(--accent-color);
+}
+
+.detail-desc i {
+    color: var(--accent-color);
+    margin-right: 8px;
+}
+
+.detail-message {
+    background: rgba(255,255,255,0.05);
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 0.8rem;
+    border-left: 3px solid rgba(255,255,255,0.3);
+}
+
+.detail-message i {
+    color: rgba(255,255,255,0.5);
+    margin-right: 8px;
+}
+
+.detail-meta {
+    display: flex;
+    gap: 1.5rem;
+    font-size: 0.85rem;
+    opacity: 0.6;
+    margin-top: 0.8rem;
+}
+
+.detail-meta i {
+    margin-right: 4px;
+}
+
+/* 操作按钮区 */
+.detail-actions {
+    display: flex;
+    gap: 0.8rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.btn-action {
+    padding: 0.6rem 1.2rem;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.btn-action i {
+    font-size: 0.85rem;
+}
+
+.btn-edit {
+    background: rgba(52, 152, 219, 0.8);
+    color: white;
+}
+
+.btn-edit:hover {
+    background: rgba(52, 152, 219, 1);
+    transform: translateY(-2px);
+}
+
+.btn-delete {
+    background: rgba(192, 57, 43, 0.8);
+    color: white;
+}
+
+.btn-delete:hover {
+    background: rgba(192, 57, 43, 1);
+    transform: translateY(-2px);
+}
+
+.btn-comment-open {
+    background: rgba(46, 204, 113, 0.8);
+    color: white;
+}
+
+.btn-comment-open:hover {
+    background: rgba(46, 204, 113, 1);
+    transform: translateY(-2px);
+}
+
+.btn-save {
+    background: #2ecc71;
+    color: white;
+}
+
+.btn-save:hover {
+    background: #27ae60;
+}
+
+.btn-cancel {
+    background: rgba(255,255,255,0.15);
+    color: var(--text-light);
+    border: 1px solid var(--border-color);
+}
+
+.btn-cancel:hover {
+    background: rgba(255,255,255,0.25);
+}
+
+.btn-confirm-delete {
+    background: #c0392b;
+    color: white;
+}
+
+.btn-confirm-delete:hover {
+    background: #a93226;
+}
+
+.btn-cancel-delete {
+    background: rgba(255,255,255,0.15);
+    color: var(--text-light);
+    border: 1px solid var(--border-color);
+}
+
+.btn-cancel-delete:hover {
+    background: rgba(255,255,255,0.25);
+}
+
+.btn-action:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none !important;
+}
+
+/* 编辑表单 */
+.edit-form-wrap {
+    background: rgba(255,255,255,0.05);
+    padding: 1.5rem;
+    border-radius: 10px;
+    margin-bottom: 1.5rem;
+    border: 1px solid rgba(52, 152, 219, 0.3);
+}
+
+.edit-form-wrap h4 {
+    margin-bottom: 1rem;
+    color: #3498db;
+}
+
+.edit-form-wrap h4 i {
+    margin-right: 8px;
+}
+
+.edit-form-actions {
+    display: flex;
+    gap: 0.8rem;
+    margin-top: 1rem;
+}
+
+/* 删除确认 */
+.delete-confirm-wrap {
+    background: rgba(192, 57, 43, 0.1);
+    padding: 1.5rem;
+    border-radius: 10px;
+    margin-bottom: 1.5rem;
+    border: 1px solid rgba(192, 57, 43, 0.3);
+}
+
+.delete-confirm-wrap h4 {
+    margin-bottom: 0.8rem;
+    color: #e74c3c;
+}
+
+.delete-confirm-wrap h4 i {
+    margin-right: 8px;
+}
+
+.delete-confirm-wrap p {
+    margin-bottom: 1rem;
+    opacity: 0.8;
+}
+
+.delete-confirm-actions {
+    display: flex;
+    gap: 0.8rem;
+}
+
+/* 照片描述预览 */
+.photo-desc-preview {
+    color: rgba(255,255,255,0.7);
+    font-style: italic;
+}
+
+.photo-desc-preview i {
+    color: var(--accent-color);
+    margin-right: 4px;
+}
+
 /* 动画 */
 @keyframes fadeIn {
     from {

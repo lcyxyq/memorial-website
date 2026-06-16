@@ -99,6 +99,44 @@ class DataManager {
         return results;
     }
 
+    async updatePhoto(id, updates) {
+        const { data, error } = await this.sb
+            .from('photos')
+            .update({
+                name: updates.name,
+                relation: updates.relation || '',
+                message: updates.message || '',
+                photo_desc: updates.photoDesc || ''
+            })
+            .eq('id', id)
+            .select()
+            .single();
+        if (error) throw error;
+        return this._photoRow(data);
+    }
+
+    async deletePhoto(id) {
+        // 1. 先查出 storage_path
+        const { data: photo, error: findErr } = await this.sb
+            .from('photos')
+            .select('storage_path')
+            .eq('id', id)
+            .single();
+        if (findErr) throw findErr;
+
+        // 2. 删除存储文件
+        if (photo && photo.storage_path) {
+            await this.sb.storage.from('photos').remove([photo.storage_path]);
+        }
+
+        // 3. 删除关联留言
+        await this.sb.from('comments').delete().eq('photo_id', id);
+
+        // 4. 删除照片记录
+        const { error } = await this.sb.from('photos').delete().eq('id', id);
+        if (error) throw error;
+    }
+
     // ── 留言 ──
 
     async addComment(photoId, commentData) {
@@ -262,6 +300,7 @@ class PhotoWall {
             <div class="photo-info">
                 <h4><i class="fas fa-user"></i> ${name}</h4>
                 ${photo.relation ? `<p><i class="fas fa-heart"></i> ${esc(photo.relation)}</p>` : ''}
+                ${photo.photoDesc ? `<p class="photo-desc-preview"><i class="fas fa-image"></i> ${esc(photo.photoDesc).slice(0,60)}${photo.photoDesc.length>60?'...':''}</p>` : ''}
                 ${photo.message ? `<p class="photo-message">${esc(photo.message).slice(0,50)}${photo.message.length>50?'...':''}</p>` : ''}
                 <div class="photo-meta">
                     <span><i class="far fa-clock"></i> ${timeAgo}</span>
@@ -269,6 +308,8 @@ class PhotoWall {
                 </div>
                 <button class="btn-comment"><i class="far fa-comment"></i> 留言</button>
             </div>`;
+        // 图片点击打开详情弹窗
+        el.querySelector('img').addEventListener('click', () => openDetailModal(photo.id));
         el.querySelector('.btn-comment').addEventListener('click', () => openCommentModal(photo.id));
         return el;
     }
@@ -291,6 +332,158 @@ class PhotoWall {
 }
 
 function esc(t) { if (!t) return ''; const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
+
+// ========================================
+// 照片详情弹窗
+// ========================================
+
+let currentDetailPhotoId = null;
+
+async function openDetailModal(photoId) {
+    currentDetailPhotoId = photoId;
+    const modal = document.getElementById('detailModal');
+    const editWrap = document.getElementById('editFormWrap');
+    const deleteWrap = document.getElementById('deleteConfirmWrap');
+
+    // 重置状态
+    editWrap.style.display = 'none';
+    deleteWrap.style.display = 'none';
+
+    try {
+        const photo = await dataManager.getPhotoById(photoId);
+        if (!photo) return;
+
+        // 填充图片
+        document.getElementById('detailPhotoImg').src = photo.photoUrl;
+        document.getElementById('detailPhotoImg').onerror = function() { this.style.display = 'none'; };
+
+        // 填充信息
+        const timeStr = photo.timestamp ? new Date(photo.timestamp).toLocaleString('zh-CN') : '';
+        document.getElementById('detailInfo').innerHTML = `
+            <h4 class="detail-name"><i class="fas fa-user"></i> ${esc(photo.name)}</h4>
+            ${photo.relation ? `<p class="detail-relation"><i class="fas fa-heart"></i> ${esc(photo.relation)}</p>` : ''}
+            ${photo.photoDesc ? `<div class="detail-desc"><i class="fas fa-image"></i> <span>${esc(photo.photoDesc)}</span></div>` : ''}
+            ${photo.message ? `<div class="detail-message"><i class="fas fa-comment"></i> <span>${esc(photo.message)}</span></div>` : ''}
+            <div class="detail-meta">
+                <span><i class="far fa-clock"></i> ${timeStr}</span>
+                <span><i class="far fa-comment"></i> ${photo.commentCount || 0} 条留言</span>
+            </div>`;
+
+        modal.classList.add('active');
+    } catch (e) { console.error(e); alert('加载照片详情失败'); }
+}
+
+function closeDetailModal() {
+    document.getElementById('detailModal').classList.remove('active');
+    currentDetailPhotoId = null;
+}
+
+// 编辑按钮
+document.addEventListener('click', e => {
+    if (e.target.closest('#btnEditPhoto')) {
+        if (!currentDetailPhotoId) return;
+        dataManager.getPhotoById(currentDetailPhotoId).then(photo => {
+            if (!photo) return;
+            document.getElementById('editName').value = photo.name || '';
+            document.getElementById('editRelation').value = photo.relation || '';
+            document.getElementById('editMessage').value = photo.message || '';
+            document.getElementById('editPhotoDesc').value = photo.photoDesc || '';
+            document.getElementById('editFormWrap').style.display = 'block';
+            document.getElementById('deleteConfirmWrap').style.display = 'none';
+        });
+    }
+});
+
+// 取消编辑
+document.addEventListener('click', e => {
+    if (e.target.closest('#btnCancelEdit')) {
+        document.getElementById('editFormWrap').style.display = 'none';
+    }
+});
+
+// 保存编辑
+document.addEventListener('submit', async e => {
+    if (e.target.id !== 'editForm') return;
+    e.preventDefault();
+    if (!currentDetailPhotoId) return;
+
+    const btn = e.target.querySelector('.btn-save');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 保存中...';
+
+    try {
+        await dataManager.updatePhoto(currentDetailPhotoId, {
+            name: document.getElementById('editName').value.trim(),
+            relation: document.getElementById('editRelation').value,
+            message: document.getElementById('editMessage').value.trim(),
+            photoDesc: document.getElementById('editPhotoDesc').value.trim()
+        });
+        document.getElementById('editFormWrap').style.display = 'none';
+        // 刷新详情弹窗
+        await openDetailModal(currentDetailPhotoId);
+        // 刷新照片墙
+        if (window.photoWall) await window.photoWall.refresh();
+    } catch (err) {
+        console.error(err);
+        alert('保存失败：' + (err.message || '请重试'));
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-check"></i> 保存';
+    }
+});
+
+// 删除按钮
+document.addEventListener('click', e => {
+    if (e.target.closest('#btnDeletePhoto')) {
+        document.getElementById('deleteConfirmWrap').style.display = 'block';
+        document.getElementById('editFormWrap').style.display = 'none';
+    }
+});
+
+// 取消删除
+document.addEventListener('click', e => {
+    if (e.target.closest('#btnCancelDelete')) {
+        document.getElementById('deleteConfirmWrap').style.display = 'none';
+    }
+});
+
+// 确认删除
+document.addEventListener('click', async e => {
+    if (e.target.closest('#btnConfirmDelete')) {
+        const btn = e.target.closest('#btnConfirmDelete');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 删除中...';
+
+        try {
+            await dataManager.deletePhoto(currentDetailPhotoId);
+            closeDetailModal();
+            if (window.photoWall) await window.photoWall.refresh();
+        } catch (err) {
+            console.error(err);
+            alert('删除失败：' + (err.message || '请重试'));
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-trash-alt"></i> 确认删除';
+        }
+    }
+});
+
+// 从详情弹窗打开留言
+document.addEventListener('click', e => {
+    if (e.target.closest('#btnOpenComment')) {
+        closeDetailModal();
+        if (currentDetailPhotoId) openCommentModal(currentDetailPhotoId);
+    }
+});
+
+// 关闭详情弹窗
+document.addEventListener('click', e => {
+    if (e.target.closest('#closeDetailModal')) closeDetailModal();
+});
+document.addEventListener('click', e => {
+    const modal = document.getElementById('detailModal');
+    if (e.target === modal) closeDetailModal();
+});
 
 // ========================================
 // 留言弹窗
