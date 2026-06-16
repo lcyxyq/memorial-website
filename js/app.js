@@ -9,7 +9,7 @@
 
 class DataManager {
     constructor() {
-        this.sb = supabase;
+        this.sb = supabaseClient;
     }
 
     // ── 照片 ──
@@ -443,6 +443,22 @@ class UploadForm {
 // ========================================
 
 document.addEventListener('DOMContentLoaded', () => {
+    // 检查 Supabase 是否正确初始化
+    if (typeof supabaseClient === 'undefined') {
+        console.error('Supabase 客户端未初始化，请检查 supabase-config.js 配置');
+        const wall = document.getElementById('photoWall');
+        if (wall) {
+            wall.innerHTML = `
+                <div class="no-photos" style="text-align:center;padding:3rem;">
+                    <i class="fas fa-exclamation-triangle" style="font-size:3rem;opacity:.3;color:#e74c3c;margin-bottom:1rem;"></i>
+                    <h3 style="opacity:.7;">系统初始化失败</h3>
+                    <p style="opacity:.5;margin-top:.5rem;">请检查 Supabase SDK 是否正确加载</p>
+                    <button onclick="location.reload()" style="margin-top:1rem;padding:.8rem 2rem;background:var(--accent-color);color:#fff;border:none;border-radius:25px;cursor:pointer;">重新加载</button>
+                </div>`;
+        }
+        return;
+    }
+
     if (document.getElementById('photoWall')) window.photoWall = new PhotoWall();
     if (document.getElementById('registerForm')) new UploadForm();
 
