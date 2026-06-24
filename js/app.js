@@ -718,8 +718,9 @@ function initShareFeature() {
 
     if (!shareFab || !shareModal) return;
 
-    // 获取当前页面URL
-    const currentUrl = window.location.href;
+    // 固定使用线上 GitHub Pages 地址（避免本地预览时显示本地路径）
+    const SITE_URL = 'https://lcyxyq.github.io/memorial-website/';
+    const currentUrl = SITE_URL;
 
     // 设置分享链接
     if (shareLinkInput) {
