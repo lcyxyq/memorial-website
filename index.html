@@ -1,38 +1,38 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>李宗文老先生追思纪念 - 永远的回忆</title>
+    <title>李宗文老先生追思紀念 - 永遠的回憶</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- qrcode.js 用于生成分享二维码 -->
+    <!-- qrcode.js 用於生成分享二維碼 -->
     <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
-    <!-- Supabase SDK (UMD 2.49.4 - 完整浏览器兼容) -->
+    <!-- Supabase SDK (UMD 2.49.4 - 完整瀏覽器相容) -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.js"></script>
 </head>
 <body>
     <header class="header">
         <div class="container">
-            <h1 class="logo"><i class="fas fa-dove"></i> 追思纪念</h1>
+            <h1 class="logo"><i class="fas fa-dove"></i> 追思紀念</h1>
             <nav class="nav">
-                <a href="index.html" class="nav-link active">回忆相册</a>
-                <a href="register.html" class="nav-link">上传回忆</a>
+                <a href="index.html" class="nav-link active">回憶相冊</a>
+                <a href="register.html" class="nav-link">上傳回憶</a>
             </nav>
         </div>
     </header>
 
-    <!-- 讣告信息横幅 -->
+    <!-- 訃告資訊橫幅 -->
     <section class="obituary-banner">
         <div class="container">
             <div class="obituary-inner">
-                <!-- 遗像 -->
+                <!-- 遺像 -->
                 <div class="obituary-portrait">
                     <img src="https://avxhoefkilkvsimiitaf.supabase.co/storage/v1/object/public/photos/memorial/portrait_official.jpg"
-                         alt="李宗文老先生遗像"
+                         alt="李宗文老先生遺像"
                          onerror="this.style.display='none'">
                 </div>
-                <!-- 文字信息 -->
+                <!-- 文字資訊 -->
                 <div class="obituary-body">
                     <div class="obituary-title-wrap">
                         <span class="obituary-zhuishi">追思</span>
@@ -43,7 +43,7 @@
                         <span>·</span>
                         民國一百一十四年六月十一日（農曆四月廿六）仙逝
                         <span>·</span>
-                        享壽 72 歲
+                        享壽 74 歲
                     </p>
                     <div class="obituary-divider"></div>
                     <div class="obituary-info-grid">
@@ -107,24 +107,24 @@
         </div>
     </footer>
 
-    <!-- 分享浮动按钮 -->
-    <button class="share-fab" id="shareFab" title="分享给朋友">
+    <!-- 分享浮動按鈕 -->
+    <button class="share-fab" id="shareFab" title="分享給朋友">
         <i class="fas fa-share-alt"></i>
     </button>
 
-    <!-- 分享弹窗 -->
+    <!-- 分享彈窗 -->
     <div class="modal" id="shareModal">
         <div class="modal-content share-modal-content">
             <span class="close-modal" id="closeShareModal">&times;</span>
-            <h3><i class="fas fa-share-alt"></i> 分享给朋友</h3>
-            <p class="share-desc">扫描二维码或复制链接，分享这份珍贵的回忆</p>
+            <h3><i class="fas fa-share-alt"></i> 分享給朋友</h3>
+            <p class="share-desc">掃描二維碼或複製連結，分享這份珍貴的回憶</p>
             <div class="share-qrcode-wrap">
                 <div id="shareQrcode"></div>
-                <p class="share-qrcode-tip">长按二维码保存图片</p>
+                <p class="share-qrcode-tip">長按二維碼儲存圖片</p>
             </div>
             <div class="share-link-wrap">
                 <input type="text" id="shareLinkInput" readonly>
-                <button class="btn-copy-link" id="btnCopyLink"><i class="fas fa-copy"></i> 复制链接</button>
+                <button class="btn-copy-link" id="btnCopyLink"><i class="fas fa-copy"></i> 複製連結</button>
             </div>
             <div class="share-actions">
                 <button class="btn-action btn-share-wechat" id="btnShareWechat">
@@ -140,7 +140,7 @@
         </div>
     </div>
 
-    <!-- 照片详情弹窗 -->
+    <!-- 照片詳情彈窗 -->
     <div class="modal" id="detailModal">
         <div class="modal-content detail-modal-content">
             <span class="close-modal" id="closeDetailModal">&times;</span>
@@ -149,27 +149,27 @@
             </div>
             <div class="detail-info" id="detailInfo"></div>
             <div class="detail-actions">
-                <button class="btn-action btn-edit" id="btnEditPhoto"><i class="fas fa-edit"></i> 编辑</button>
-                <button class="btn-action btn-delete" id="btnDeletePhoto"><i class="fas fa-trash-alt"></i> 删除</button>
+                <button class="btn-action btn-edit" id="btnEditPhoto"><i class="fas fa-edit"></i> 編輯</button>
+                <button class="btn-action btn-delete" id="btnDeletePhoto"><i class="fas fa-trash-alt"></i> 刪除</button>
                 <button class="btn-action btn-comment-open" id="btnOpenComment"><i class="far fa-comment"></i> 留言</button>
             </div>
-            <!-- 编辑表单（默认隐藏） -->
+            <!-- 編輯表單（預設隱藏） -->
             <div class="edit-form-wrap" id="editFormWrap" style="display:none;">
-                <h4><i class="fas fa-edit"></i> 编辑照片信息</h4>
+                <h4><i class="fas fa-edit"></i> 編輯照片資訊</h4>
                 <form id="editForm">
                     <div class="form-group">
                         <label>姓名</label>
                         <input type="text" id="editName" required>
                     </div>
                     <div class="form-group">
-                        <label>与逝者关系</label>
+                        <label>與逝者關係</label>
                         <select id="editRelation">
-                            <option value="">请选择</option>
+                            <option value="">請選擇</option>
                             <option value="家人">家人</option>
-                            <option value="亲戚">亲戚</option>
+                            <option value="親戚">親戚</option>
                             <option value="朋友">朋友</option>
                             <option value="同事">同事</option>
-                            <option value="同学">同学</option>
+                            <option value="同學">同學</option>
                             <option value="其他">其他</option>
                         </select>
                     </div>
@@ -182,24 +182,24 @@
                         <textarea id="editPhotoDesc" rows="3"></textarea>
                     </div>
                     <div class="edit-form-actions">
-                        <button type="submit" class="btn-action btn-save"><i class="fas fa-check"></i> 保存</button>
+                        <button type="submit" class="btn-action btn-save"><i class="fas fa-check"></i> 儲存</button>
                         <button type="button" class="btn-action btn-cancel" id="btnCancelEdit"><i class="fas fa-times"></i> 取消</button>
                     </div>
                 </form>
             </div>
-            <!-- 删除确认 -->
+            <!-- 刪除確認 -->
             <div class="delete-confirm-wrap" id="deleteConfirmWrap" style="display:none;">
-                <h4><i class="fas fa-exclamation-triangle"></i> 确认删除</h4>
-                <p>删除后无法恢复，确定要删除这张照片吗？</p>
+                <h4><i class="fas fa-exclamation-triangle"></i> 確認刪除</h4>
+                <p>刪除後無法復原，確定要刪除這張照片嗎？</p>
                 <div class="delete-confirm-actions">
-                    <button class="btn-action btn-confirm-delete" id="btnConfirmDelete"><i class="fas fa-trash-alt"></i> 确认删除</button>
+                    <button class="btn-action btn-confirm-delete" id="btnConfirmDelete"><i class="fas fa-trash-alt"></i> 確認刪除</button>
                     <button class="btn-action btn-cancel-delete" id="btnCancelDelete"><i class="fas fa-times"></i> 取消</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- 留言弹窗 -->
+    <!-- 留言彈窗 -->
     <div class="modal" id="commentModal">
         <div class="modal-content">
             <span class="close-modal">&times;</span>
@@ -207,8 +207,8 @@
             <div class="photo-preview" id="modalPhotoPreview"></div>
             <form id="commentForm">
                 <input type="text" id="commentName" placeholder="您的姓名" required>
-                <textarea id="commentText" placeholder="写下您的思念与祝福..." rows="4" required></textarea>
-                <button type="submit" class="btn-submit">发送祝福</button>
+                <textarea id="commentText" placeholder="寫下您的思念與祝福..." rows="4" required></textarea>
+                <button type="submit" class="btn-submit">傳送祝福</button>
             </form>
             <div class="comments-list" id="commentsList"></div>
         </div>

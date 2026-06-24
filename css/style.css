@@ -469,6 +469,13 @@ body {
     color: var(--gold);
 }
 
+.form-hint {
+    font-size: 0.82rem;
+    color: var(--ink-light);
+    margin-top: 0.4rem;
+    line-height: 1.6;
+}
+
 .form-group input,
 .form-group select,
 .form-group textarea {
@@ -797,6 +804,18 @@ body {
 
 .detail-message i { color: var(--ink-light); margin-right: 6px; }
 
+.detail-attendance {
+    background: rgba(184, 150, 62, 0.08);
+    padding: 0.8rem 1rem;
+    border-radius: 3px;
+    margin-bottom: 0.7rem;
+    border-left: 3px solid var(--gold);
+    color: var(--gold);
+    font-size: 0.9rem;
+}
+
+.detail-attendance i { color: var(--gold); margin-right: 6px; }
+
 .detail-meta {
     display: flex;
     gap: 1.2rem;
@@ -1014,6 +1033,14 @@ body {
 }
 
 .photo-desc-preview i { color: var(--gold-light); margin-right: 4px; }
+
+.photo-attendance {
+    font-size: 0.82rem;
+    color: var(--gold);
+    margin: 0.2rem 0;
+}
+
+.photo-attendance i { margin-right: 4px; }
 
 /* ========================================
    动画

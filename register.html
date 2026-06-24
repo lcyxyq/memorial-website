@@ -6,7 +6,7 @@
     <title>上傳回憶 - 李宗文老先生追思紀念</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Supabase SDK (UMD 2.49.4 - 完整浏览器兼容) -->
+    <!-- Supabase SDK (UMD 2.49.4 - 完整瀏覽器相容) -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.js"></script>
 </head>
 <body>
@@ -24,7 +24,7 @@
         <div class="container">
             <section class="form-section">
                 <h2 class="section-title">分享回憶</h2>
-                <p class="section-desc">請填寫以下信息，上傳珍貴的生活照片，與大家分享美好的回憶</p>
+                <p class="section-desc">請填寫以下資訊，上傳珍貴的生活照片，與大家分享美好的回憶</p>
 
                 <form id="registerForm" class="register-form">
                     <div class="form-group">
@@ -45,17 +45,28 @@
                         </select>
                     </div>
 
+                    <!-- 是否親臨致奠 -->
+                    <div class="form-group">
+                        <label for="attendance"><i class="fas fa-church"></i> 告別式．親臨致奠 *</label>
+                        <select id="attendance" name="attendance" required>
+                            <option value="">請選擇…</option>
+                            <option value="將親臨致奠">將親臨致奠</option>
+                            <option value="心香一瓣（無法親臨）">心香一瓣（無法親臨）</option>
+                        </select>
+                        <p class="form-hint">告別式訂於民國115年7月10日（星期五）上午，您的蒞臨是我們最大的安慰</p>
+                    </div>
+
                     <div class="form-group">
                         <label for="message"><i class="fas fa-comment"></i> 留言祝福</label>
-                        <textarea id="message" name="message" rows="4" placeholder="寫下您想說的話..."></textarea>
+                        <textarea id="message" name="message" rows="4" placeholder="寫下您想說的話…"></textarea>
                     </div>
 
                     <div class="form-group">
                         <label><i class="fas fa-images"></i> 上傳生活照片 *</label>
                         <div class="upload-area" id="uploadArea">
                             <i class="fas fa-cloud-upload-alt"></i>
-                            <p>點擊或拖拽照片到此處</p>
-                            <p class="upload-hint">支持 JPG、PNG 格式，建議尺寸大於 800×600</p>
+                            <p>點擊或拖曳照片到此處</p>
+                            <p class="upload-hint">支援 JPG、PNG 格式，建議尺寸大於 800×600</p>
                             <input type="file" id="photoInput" accept="image/*" multiple required>
                         </div>
                         <div class="preview-grid" id="previewGrid"></div>
@@ -63,7 +74,7 @@
 
                     <div class="form-group">
                         <label for="photoDesc"><i class="fas fa-pen"></i> 照片描述</label>
-                        <textarea id="photoDesc" name="photoDesc" rows="3" placeholder="描述這張照片的故事..."></textarea>
+                        <textarea id="photoDesc" name="photoDesc" rows="3" placeholder="描述這張照片的故事…"></textarea>
                     </div>
 
                     <div class="form-actions">
@@ -79,7 +90,7 @@
                         <div class="progress-bar">
                             <div class="progress-fill" id="progressFill"></div>
                         </div>
-                        <p class="progress-text" id="progressText">正在上傳...</p>
+                        <p class="progress-text" id="progressText">正在上傳…</p>
                     </div>
                 </form>
 
