@@ -399,10 +399,11 @@ document.addEventListener('click', e => {
         if (!currentDetailPhotoId) return;
         dataManager.getPhotoById(currentDetailPhotoId).then(photo => {
             if (!photo) return;
-            document.getElementById('editName').value      = photo.name || '';
-            document.getElementById('editRelation').value  = photo.relation || '';
-            document.getElementById('editMessage').value   = photo.message || '';
-            document.getElementById('editPhotoDesc').value = photo.photoDesc || '';
+            document.getElementById('editName').value       = photo.name || '';
+            document.getElementById('editRelation').value   = photo.relation || '';
+            document.getElementById('editMessage').value    = photo.message || '';
+            document.getElementById('editPhotoDesc').value  = photo.photoDesc || '';
+            document.getElementById('editAttendance').value = photo.attendance || '';
             document.getElementById('editFormWrap').style.display = 'block';
             document.getElementById('deleteConfirmWrap').style.display = 'none';
         });
@@ -431,7 +432,8 @@ document.addEventListener('submit', async e => {
             name:       document.getElementById('editName').value.trim(),
             relation:   document.getElementById('editRelation').value,
             message:    document.getElementById('editMessage').value.trim(),
-            photoDesc:  document.getElementById('editPhotoDesc').value.trim()
+            photoDesc:  document.getElementById('editPhotoDesc').value.trim(),
+            attendance:  document.getElementById('editAttendance').value
         });
         document.getElementById('editFormWrap').style.display = 'none';
         // 重新整理詳情彈窗
@@ -585,16 +587,17 @@ class UploadForm {
 
     _preview() {
         this.previewGrid.innerHTML = '';
-        this.files.forEach((f, i) => {
+        this.files.forEach((f, idx) => {
             const reader = new FileReader();
             reader.onload = e => {
                 const d = document.createElement('div');
                 d.className = 'preview-item';
-                d.innerHTML = `<img src="${e.target.result}" alt="預覽"><button type="button" class="remove-btn" data-i="${i}"><i class="fas fa-times"></i></button>`;
+                d.innerHTML = `<img src="${e.target.result}" alt="預覽"><button type="button" class="remove-btn" data-idx="${idx}"><i class="fas fa-times"></i></button>`;
                 this.previewGrid.appendChild(d);
                 d.querySelector('.remove-btn').addEventListener('click', ev => {
                     ev.stopPropagation();
-                    this.files.splice(parseInt(ev.target.closest('.remove-btn').dataset.i), 1);
+                    const targetIdx = parseInt(ev.target.closest('.remove-btn').dataset.idx);
+                    this.files.splice(targetIdx, 1);
                     this._preview();
                 });
             };
