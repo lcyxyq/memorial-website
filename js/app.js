@@ -690,9 +690,16 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // 关闭弹窗
-    const closeBtn = document.querySelector('.close-modal');
-    if (closeBtn) closeBtn.addEventListener('click', closeCommentModal);
+    // 关闭弹窗 —— 遍历所有 .close-modal，根据所属弹窗分别绑定
+    document.querySelectorAll('.close-modal').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const modal = btn.closest('.modal');
+            if (!modal) return;
+            if (modal.id === 'commentModal')  closeCommentModal();
+            else if (modal.id === 'detailModal') closeDetailModal();
+            else modal.classList.remove('active');
+        });
+    });
     const modal = document.getElementById('commentModal');
     if (modal) modal.addEventListener('click', e => { if (e.target === modal) closeCommentModal(); });
 

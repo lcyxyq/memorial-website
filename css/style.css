@@ -667,6 +667,8 @@ body {
     position: relative;
     box-shadow: 0 10px 40px rgba(45, 37, 32, 0.2);
     border: 1px solid var(--border-warm);
+    overflow: hidden;       /* 防止子元素撑出边框 */
+    box-sizing: border-box;
 }
 
 .close-modal {
@@ -695,11 +697,18 @@ body {
 .photo-preview { margin-bottom: 1.3rem; border-radius: 3px; overflow: hidden; }
 .photo-preview img { width: 100%; height: auto; display: block; }
 
+#commentModal .modal-content {
+    overflow-y: auto;
+    overflow-x: hidden;
+    max-height: 88vh;
+}
+
 #commentForm { margin-bottom: 1.5rem; }
 
 #commentForm input,
 #commentForm textarea {
     width: 100%;
+    box-sizing: border-box;
     padding: 0.75rem;
     margin-bottom: 0.8rem;
     background: var(--ivory);
@@ -739,7 +748,8 @@ body {
 .detail-modal-content {
     max-width: 700px;
     max-height: 90vh;
-    overflow-y: auto;
+    overflow-y: auto;  /* detail弹窗需要滚动，覆盖父级hidden */
+    overflow-x: hidden;
 }
 
 .detail-photo-wrap {
@@ -893,7 +903,12 @@ body {
 .share-fab:hover { background: #9e7c2f; transform: scale(1.08); }
 .share-fab:active { transform: scale(0.94); }
 
-.share-modal-content { max-width: 480px; text-align: center; }
+.share-modal-content {
+    max-width: 480px;
+    text-align: center;
+    overflow: hidden;  /* 防止内容溢出 */
+    word-break: break-all;
+}
 .share-modal-content h3 { color: var(--ink); }
 .share-modal-content h3 i { color: var(--gold); margin-right: 8px; }
 .share-desc { color: var(--ink-light); margin-bottom: 1.3rem; font-size: 0.9rem; }
@@ -911,16 +926,20 @@ body {
 #shareQrcode img, #shareQrcode canvas { max-width: 100%; height: auto; }
 .share-qrcode-tip { margin-top: 0.6rem; font-size: 0.82rem; color: var(--ink-light); }
 
-.share-link-wrap { display: flex; gap: 0.5rem; margin-bottom: 1.2rem; }
+.share-link-wrap { display: flex; gap: 0.5rem; margin-bottom: 1.2rem; overflow: hidden; }
 
 .share-link-wrap input {
     flex: 1;
+    min-width: 0;          /* 防止 flex 子项溢出 */
     padding: 0.7rem;
     background: var(--ivory);
     border: 1px solid var(--border-warm);
     border-radius: 2px;
     color: var(--ink);
     font-size: 0.88rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .btn-copy-link {
@@ -939,13 +958,19 @@ body {
 .btn-copy-link:hover { background: rgba(100, 160, 210, 1); }
 .btn-copy-link.copied { background: var(--lily-green); }
 
-.share-actions { display: flex; gap: 0.7rem; justify-content: center; flex-wrap: wrap; }
+.share-actions {
+    display: flex;
+    gap: 0.7rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    width: 100%;          /* 确保不溢出 */
+}
 
-.btn-share-wechat { background: rgba(7, 193, 96, 0.8); color: #fff; }
+.btn-share-wechat { background: rgba(7, 193, 96, 0.8); color: #fff; flex: 1; min-width: 0; justify-content: center; }
 .btn-share-wechat:hover { background: rgba(7, 193, 96, 1); transform: translateY(-2px); }
-.btn-share-weibo { background: rgba(210, 50, 70, 0.8); color: #fff; }
+.btn-share-weibo { background: rgba(210, 50, 70, 0.8); color: #fff; flex: 1; min-width: 0; justify-content: center; }
 .btn-share-weibo:hover { background: rgba(210, 50, 70, 1); transform: translateY(-2px); }
-.btn-share-qq { background: rgba(0, 140, 230, 0.8); color: #fff; }
+.btn-share-qq { background: rgba(0, 140, 230, 0.8); color: #fff; flex: 1; min-width: 0; justify-content: center; }
 .btn-share-qq:hover { background: rgba(0, 140, 230, 1); transform: translateY(-2px); }
 
 /* ========================================
