@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>缅怀纪念 - 永远的回忆</title>
+    <title>李宗文老先生追思纪念 - 永远的回忆</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- qrcode.js 用于生成分享二维码 -->
@@ -14,25 +14,75 @@
 <body>
     <header class="header">
         <div class="container">
-            <h1 class="logo"><i class="fas fa-dove"></i> 缅怀纪念</h1>
+            <h1 class="logo"><i class="fas fa-dove"></i> 追思纪念</h1>
             <nav class="nav">
-                <a href="index.html" class="nav-link active">照片墙</a>
-                <a href="register.html" class="nav-link">登记信息</a>
+                <a href="index.html" class="nav-link active">回忆相册</a>
+                <a href="register.html" class="nav-link">上传回忆</a>
             </nav>
         </div>
     </header>
 
+    <!-- 讣告信息横幅 -->
+    <section class="obituary-banner">
+        <div class="container">
+            <div class="obituary-inner">
+                <!-- 遗像 -->
+                <div class="obituary-portrait">
+                    <img src="https://avxhoefkilkvsimiitaf.supabase.co/storage/v1/object/public/photos/memorial/portrait_official.jpg"
+                         alt="李宗文老先生遗像"
+                         onerror="this.style.display='none'">
+                </div>
+                <!-- 文字信息 -->
+                <div class="obituary-body">
+                    <div class="obituary-title-wrap">
+                        <span class="obituary-zhuishi">追思</span>
+                        <span class="obituary-name">顯考 李公諱宗文 老先生</span>
+                    </div>
+                    <p class="obituary-birth-death">
+                        民國四十二年二月十九日（農曆正月初六）出生
+                        <span>·</span>
+                        民國一百一十四年六月十一日（農曆四月廿六）仙逝
+                        <span>·</span>
+                        享壽 72 歲
+                    </p>
+                    <div class="obituary-divider"></div>
+                    <div class="obituary-info-grid">
+                        <div class="obituary-info-item">
+                            <span class="label">告別式</span>
+                            <span class="value">民國115年7月10日（農曆五月廿六）星期五</span>
+                        </div>
+                        <div class="obituary-info-item">
+                            <span class="label">時間</span>
+                            <span class="value">公奠：上午 8:50 &nbsp;|&nbsp; 發引：上午 9:30</span>
+                        </div>
+                        <div class="obituary-info-item">
+                            <span class="label">地點</span>
+                            <span class="value">台北市慈愛館【景行樓一樓－王忠一廳】</span>
+                        </div>
+                        <div class="obituary-info-item">
+                            <span class="label">地址</span>
+                            <span class="value">台北市基隆路三段155巷128之21號 聖龍會館 A07號</span>
+                        </div>
+                    </div>
+                    <p class="obituary-family">
+                        孤哀子：元正、元坤 &nbsp;·&nbsp; 孤哀媳：張婷 &nbsp;·&nbsp; 孝孫：宗益、松和 &nbsp;·&nbsp; 護喪妻：鄭莎莉 &nbsp;·&nbsp; 族繁不及備載
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <section class="hero">
         <div class="container">
-            <h2 class="hero-title">永远的回忆</h2>
-            <p class="hero-subtitle">那些美好的时光，将永远留在我们心中</p>
+            <h2 class="hero-title">珍貴的回憶</h2>
+            <p class="hero-subtitle">每一張照片，都是與老先生共度的美好時光</p>
         </div>
     </section>
 
     <main class="main-content">
         <div class="container">
             <div class="filters">
-                <button class="filter-btn active" data-filter="all">全部回忆</button>
+                <button class="filter-btn active" data-filter="all">全部回憶</button>
                 <button class="filter-btn" data-filter="recent">最新添加</button>
                 <button class="filter-btn" data-filter="most-comments">最多留言</button>
             </div>
@@ -40,20 +90,20 @@
             <div class="masonry-grid" id="photoWall">
                 <div class="loading">
                     <i class="fas fa-spinner fa-spin"></i>
-                    <p>正在加载回忆...</p>
+                    <p>正在載入回憶...</p>
                 </div>
             </div>
 
             <div class="load-more">
-                <button class="btn-load-more" id="loadMore">加载更多回忆</button>
+                <button class="btn-load-more" id="loadMore">載入更多回憶</button>
             </div>
         </div>
     </main>
 
     <footer class="footer">
         <div class="container">
-            <p>永远怀念 · 永远铭记</p>
-            <p class="footer-quote">"那些我们爱过的人，永远不会真正离开我们"</p>
+            <p>永遠懷念 · 永遠銘記</p>
+            <p class="footer-quote">「那些我們愛過的人，永遠不會真正離開我們」</p>
         </div>
     </footer>
 
@@ -97,9 +147,7 @@
             <div class="detail-photo-wrap">
                 <img id="detailPhotoImg" src="" alt="">
             </div>
-            <div class="detail-info" id="detailInfo">
-                <!-- 动态填充 -->
-            </div>
+            <div class="detail-info" id="detailInfo"></div>
             <div class="detail-actions">
                 <button class="btn-action btn-edit" id="btnEditPhoto"><i class="fas fa-edit"></i> 编辑</button>
                 <button class="btn-action btn-delete" id="btnDeletePhoto"><i class="fas fa-trash-alt"></i> 删除</button>

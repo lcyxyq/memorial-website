@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>登记信息 - 缅怀纪念</title>
+    <title>上傳回憶 - 李宗文老先生追思紀念</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Supabase SDK (UMD 2.49.4 - 完整浏览器兼容) -->
@@ -12,10 +12,10 @@
 <body>
     <header class="header">
         <div class="container">
-            <h1 class="logo"><i class="fas fa-dove"></i> 缅怀纪念</h1>
+            <h1 class="logo"><i class="fas fa-dove"></i> 追思紀念</h1>
             <nav class="nav">
-                <a href="index.html" class="nav-link">照片墙</a>
-                <a href="register.html" class="nav-link active">登记信息</a>
+                <a href="index.html" class="nav-link">回憶相冊</a>
+                <a href="register.html" class="nav-link active">上傳回憶</a>
             </nav>
         </div>
     </header>
@@ -23,39 +23,39 @@
     <main class="main-content">
         <div class="container">
             <section class="form-section">
-                <h2 class="section-title">分享回忆</h2>
-                <p class="section-desc">请填写以下信息，上传珍贵的生活照片，与大家分享美好回忆</p>
+                <h2 class="section-title">分享回憶</h2>
+                <p class="section-desc">請填寫以下信息，上傳珍貴的生活照片，與大家分享美好的回憶</p>
 
                 <form id="registerForm" class="register-form">
                     <div class="form-group">
                         <label for="name"><i class="fas fa-user"></i> 您的姓名 *</label>
-                        <input type="text" id="name" name="name" required placeholder="请输入您的姓名">
+                        <input type="text" id="name" name="name" required placeholder="請輸入您的姓名">
                     </div>
 
                     <div class="form-group">
-                        <label for="relation"><i class="fas fa-heart"></i> 与逝者关系</label>
+                        <label for="relation"><i class="fas fa-heart"></i> 與逝者關係</label>
                         <select id="relation" name="relation">
-                            <option value="">请选择关系</option>
+                            <option value="">請選擇關係</option>
                             <option value="家人">家人</option>
-                            <option value="亲戚">亲戚</option>
+                            <option value="親戚">親戚</option>
                             <option value="朋友">朋友</option>
                             <option value="同事">同事</option>
-                            <option value="同学">同学</option>
+                            <option value="同學">同學</option>
                             <option value="其他">其他</option>
                         </select>
                     </div>
 
                     <div class="form-group">
                         <label for="message"><i class="fas fa-comment"></i> 留言祝福</label>
-                        <textarea id="message" name="message" rows="4" placeholder="写下您想说的话..."></textarea>
+                        <textarea id="message" name="message" rows="4" placeholder="寫下您想說的話..."></textarea>
                     </div>
 
                     <div class="form-group">
-                        <label><i class="fas fa-images"></i> 上传生活照片 *</label>
+                        <label><i class="fas fa-images"></i> 上傳生活照片 *</label>
                         <div class="upload-area" id="uploadArea">
                             <i class="fas fa-cloud-upload-alt"></i>
-                            <p>点击或拖拽照片到此处</p>
-                            <p class="upload-hint">支持 JPG、PNG 格式，建议尺寸大于 800x600</p>
+                            <p>點擊或拖拽照片到此處</p>
+                            <p class="upload-hint">支持 JPG、PNG 格式，建議尺寸大於 800×600</p>
                             <input type="file" id="photoInput" accept="image/*" multiple required>
                         </div>
                         <div class="preview-grid" id="previewGrid"></div>
@@ -63,15 +63,15 @@
 
                     <div class="form-group">
                         <label for="photoDesc"><i class="fas fa-pen"></i> 照片描述</label>
-                        <textarea id="photoDesc" name="photoDesc" rows="3" placeholder="描述这张照片的故事..."></textarea>
+                        <textarea id="photoDesc" name="photoDesc" rows="3" placeholder="描述這張照片的故事..."></textarea>
                     </div>
 
                     <div class="form-actions">
                         <button type="submit" class="btn-submit" id="submitBtn">
-                            <i class="fas fa-paper-plane"></i> 提交回忆
+                            <i class="fas fa-paper-plane"></i> 提交回憶
                         </button>
                         <button type="reset" class="btn-reset">
-                            <i class="fas fa-redo"></i> 重新填写
+                            <i class="fas fa-redo"></i> 重新填寫
                         </button>
                     </div>
 
@@ -79,15 +79,15 @@
                         <div class="progress-bar">
                             <div class="progress-fill" id="progressFill"></div>
                         </div>
-                        <p class="progress-text" id="progressText">正在上传...</p>
+                        <p class="progress-text" id="progressText">正在上傳...</p>
                     </div>
                 </form>
 
                 <div class="success-message" id="successMessage" style="display: none;">
                     <i class="fas fa-check-circle"></i>
                     <h3>提交成功</h3>
-                    <p>您的回忆已成功添加，感谢您的分享。</p>
-                    <a href="index.html" class="btn-link">查看照片墙</a>
+                    <p>您的回憶已成功添加，感謝您的分享。</p>
+                    <a href="index.html" class="btn-link">查看回憶相冊</a>
                 </div>
             </section>
         </div>
@@ -95,7 +95,8 @@
 
     <footer class="footer">
         <div class="container">
-            <p>永远怀念 · 永远铭记</p>
+            <p>永遠懷念 · 永遠銘記</p>
+            <p class="footer-quote">「那些我們愛過的人，永遠不會真正離開我們」</p>
         </div>
     </footer>
 
