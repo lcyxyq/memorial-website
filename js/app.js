@@ -54,33 +54,49 @@ class DataManager {
         return sorted.slice(skip, skip + limit);
     }
 
-    async addPhoto(photoData, imageFile) {
-        // 1. 壓縮圖片
-        const blob = await compressImage(imageFile, 1200, 0.85);
-        const ext = imageFile.name.split('.').pop() || 'jpg';
+    async addPhoto(photoData, mediaFile) {
+        const isVideo = mediaFile.type.startsWith('video/');
+
+        // 1. 處理檔案：圖片壓縮，影片直接使用
+        let blob, contentType, ext;
+        if (isVideo) {
+            // 影片：驗證大小（≤50MB），直接上傳
+            if (mediaFile.size > 50 * 1024 * 1024) {
+                throw new Error('影片檔案過大，請限制在 50MB 以內');
+            }
+            blob = mediaFile;
+            ext = mediaFile.name.split('.').pop() || 'mp4';
+            contentType = mediaFile.type || 'video/mp4';
+        } else {
+            // 圖片：壓縮後上傳
+            blob = await compressImage(mediaFile, 1200, 0.85);
+            ext = mediaFile.name.split('.').pop() || 'jpg';
+            contentType = 'image/jpeg';
+        }
+
         const filePath = `memorial/${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`;
 
         // 2. 上傳到 Supabase Storage
         const { error: uploadErr } = await this.sb
             .storage
             .from('photos')
-            .upload(filePath, blob, { contentType: 'image/jpeg', upsert: false });
+            .upload(filePath, blob, { contentType, upsert: false });
         if (uploadErr) throw uploadErr;
 
         // 3. 取得公開 URL
         const { data: urlData } = this.sb.storage.from('photos').getPublicUrl(filePath);
         const photoUrl = urlData.publicUrl;
 
-        // 4. 寫入 photos 表（含 attendence）
+        // 4. 寫入 photos 表
         const insertObj = {
             name:         photoData.name,
             relation:      photoData.relation || '',
             message:       photoData.message || '',
             photo_desc:    photoData.photoDesc || '',
             photo_url:     photoUrl,
-            storage_path:  filePath
+            storage_path:  filePath,
+            media_type:    isVideo ? 'video' : 'image'
         };
-        // 若有 attendence 欄位則寫入（Supabase 表需事先新增該欄位）
         if (photoData.attendance) insertObj.attendance = photoData.attendance;
 
         const { data, error } = await this.sb
@@ -193,6 +209,7 @@ class DataManager {
             photoDesc:    row.photo_desc || '',
             attendance:   row.attendance || '',
             photoUrl:     row.photo_url || '',
+            mediaType:    row.media_type || 'image',
             commentCount,
             timestamp:    row.created_at
         };
@@ -304,9 +321,24 @@ class PhotoWall {
         const attendanceHtml = photo.attendance
             ? `<p class="photo-attendance"><i class="fas fa-church"></i> ${esc(photo.attendance)}</p>`
             : '';
+        const isVideo = photo.mediaType === 'video';
+
+        // 媒體元素：影片用 <video>，圖片用 <img>
+        let mediaHtml;
+        if (isVideo) {
+            mediaHtml = `<div class="video-thumb" data-id="${photo.id}">
+                <video src="${photo.photoUrl}" preload="metadata" muted playsinline
+                       onerror="this.parentElement.innerHTML='<div class=\\'video-error\\'>影片載入失敗</div>'"></video>
+                <div class="video-play-overlay"><i class="fas fa-play-circle"></i></div>
+                <span class="video-badge"><i class="fas fa-video"></i> 影片</span>
+            </div>`;
+        } else {
+            mediaHtml = `<img src="${photo.photoUrl}" alt="${name}" loading="lazy"
+                 onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgZmlsbD0iI2VjZjBmMSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkeT0iLjNlbSIgZmlsbD0iI2FhYmFhMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMjAiIHRleHQtYW5jaG9yPSJtaWRkbGUiPuaXpeS4suaWueazle+8gTwvdGV4dD48L3N2Zz4='">`;
+        }
+
         el.innerHTML = `
-            <img src="${photo.photoUrl}" alt="${name}" loading="lazy"
-                 onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgZmlsbD0iI2VjZjBmMSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkeT0iLjNlbSIgZmlsbD0iI2FhYmFhMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMjAiIHRleHQtYW5jaG9yPSJtaWRkbGUiPuaXpeS4suaWueazle+8gTwvdGV4dD48L3N2Zz4='">
+            ${mediaHtml}
             <div class="photo-info">
                 <h4><i class="fas fa-user"></i> ${name}</h4>
                 ${photo.relation ? `<p><i class="fas fa-heart"></i> ${esc(photo.relation)}</p>` : ''}
@@ -319,8 +351,9 @@ class PhotoWall {
                 </div>
                 <button class="btn-comment"><i class="far fa-comment"></i> 留言</button>
             </div>`;
-        // 圖片點擊開啟詳情彈窗
-        el.querySelector('img').addEventListener('click', () => openDetailModal(photo.id));
+        // 媒體點擊開啟詳情彈窗
+        const mediaEl = isVideo ? el.querySelector('.video-thumb') : el.querySelector('img');
+        if (mediaEl) mediaEl.addEventListener('click', () => openDetailModal(photo.id));
         el.querySelector('.btn-comment').addEventListener('click', () => openCommentModal(photo.id));
         return el;
     }
@@ -364,9 +397,17 @@ async function openDetailModal(photoId) {
         const photo = await dataManager.getPhotoById(photoId);
         if (!photo) return;
 
-        // 填入圖片
-        document.getElementById('detailPhotoImg').src = photo.photoUrl;
-        document.getElementById('detailPhotoImg').onerror = function() { this.style.display = 'none'; };
+        // 填入媒體（圖片或影片）
+        const photoWrap = document.querySelector('.detail-photo-wrap');
+        if (photo.mediaType === 'video') {
+            photoWrap.innerHTML = `<video src="${photo.photoUrl}" controls playsinline preload="metadata"
+                style="width:100%;max-height:60vh;border-radius:3px;background:#000;"
+                onerror="this.outerHTML='<p style=\\'text-align:center;padding:2rem;color:var(--ink-light);\\'>影片載入失敗</p>'"></video>`;
+        } else {
+            photoWrap.innerHTML = `<img id="detailPhotoImg" src="${photo.photoUrl}" alt=""
+                style="width:100%;max-height:60vh;object-fit:contain;border-radius:3px;"
+                onerror="this.style.display='none'">`;
+        }
 
         // 填入資訊
         const timeStr = photo.timestamp ? new Date(photo.timestamp).toLocaleString('zh-TW') : '';
@@ -514,7 +555,14 @@ async function openCommentModal(photoId) {
     try {
         const photo = await dataManager.getPhotoById(photoId);
         if (!photo) return;
-        document.getElementById('modalPhotoPreview').innerHTML = `<img src="${photo.photoUrl}" alt="" onerror="this.style.display='none'">`;
+        // 預覽：影片或圖片
+        const previewEl = document.getElementById('modalPhotoPreview');
+        if (photo.mediaType === 'video') {
+            previewEl.innerHTML = `<video src="${photo.photoUrl}" controls playsinline preload="metadata"
+                style="width:100%;max-height:300px;border-radius:3px;background:#000;"></video>`;
+        } else {
+            previewEl.innerHTML = `<img src="${photo.photoUrl}" alt="" onerror="this.style.display='none'">`;
+        }
         document.getElementById('commentsList').innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i></div>';
         modal.classList.add('active');
         await renderComments(photoId);
@@ -570,8 +618,10 @@ class UploadForm {
         this.uploadArea.addEventListener('drop', e => {
             e.preventDefault();
             this.uploadArea.style.borderColor = 'var(--border-color)';
-            const imgs = [...e.dataTransfer.files].filter(f => f.type.startsWith('image/'));
-            this.files.push(...imgs);
+            const valid = [...e.dataTransfer.files].filter(f =>
+                f.type.startsWith('image/') || f.type.startsWith('video/')
+            );
+            this.files.push(...valid);
             this._preview();
         });
 
@@ -588,27 +638,59 @@ class UploadForm {
     _preview() {
         this.previewGrid.innerHTML = '';
         this.files.forEach((f, idx) => {
-            const reader = new FileReader();
-            reader.onload = e => {
+            const isVideo = f.type.startsWith('video/');
+            if (isVideo) {
+                // 影片預覽：用 video 元素顯示第一幀
                 const d = document.createElement('div');
-                d.className = 'preview-item';
-                d.innerHTML = `<img src="${e.target.result}" alt="預覽"><button type="button" class="remove-btn" data-idx="${idx}"><i class="fas fa-times"></i></button>`;
+                d.className = 'preview-item preview-video';
+                const videoUrl = URL.createObjectURL(f);
+                d.innerHTML = `<video src="${videoUrl}" preload="metadata" muted></video>
+                    <span class="preview-video-badge"><i class="fas fa-video"></i></span>
+                    <button type="button" class="remove-btn" data-idx="${idx}"><i class="fas fa-times"></i></button>`;
                 this.previewGrid.appendChild(d);
+                // 釋放 URL 避免記憶體洩漏
+                d.querySelector('video').addEventListener('loadeddata', function() {
+                    // 保留 URL 直到元素移除
+                });
                 d.querySelector('.remove-btn').addEventListener('click', ev => {
                     ev.stopPropagation();
+                    URL.revokeObjectURL(videoUrl);
                     const targetIdx = parseInt(ev.target.closest('.remove-btn').dataset.idx);
                     this.files.splice(targetIdx, 1);
                     this._preview();
                 });
-            };
-            reader.readAsDataURL(f);
+            } else {
+                // 圖片預覽
+                const reader = new FileReader();
+                reader.onload = e => {
+                    const d = document.createElement('div');
+                    d.className = 'preview-item';
+                    d.innerHTML = `<img src="${e.target.result}" alt="預覽"><button type="button" class="remove-btn" data-idx="${idx}"><i class="fas fa-times"></i></button>`;
+                    this.previewGrid.appendChild(d);
+                    d.querySelector('.remove-btn').addEventListener('click', ev => {
+                        ev.stopPropagation();
+                        const targetIdx = parseInt(ev.target.closest('.remove-btn').dataset.idx);
+                        this.files.splice(targetIdx, 1);
+                        this._preview();
+                    });
+                };
+                reader.readAsDataURL(f);
+            }
         });
     }
 
     async _submit() {
-        if (!this.files.length) { alert('請至少上傳一張照片'); return; }
+        if (!this.files.length) { alert('請至少上傳一張照片或一段影片'); return; }
         const name = document.getElementById('name').value.trim();
         if (!name) { alert('請填寫姓名'); return; }
+
+        // 驗證影片檔案大小
+        for (const f of this.files) {
+            if (f.type.startsWith('video/') && f.size > 50 * 1024 * 1024) {
+                alert(`影片「${f.name}」超過 50MB 限制，請壓縮後再上傳`);
+                return;
+            }
+        }
 
         const relation   = document.getElementById('relation').value;
         const message    = document.getElementById('message').value.trim();
@@ -631,7 +713,7 @@ class UploadForm {
                 this.files,
                 (cur, total) => {
                     fill.style.width = Math.round(cur / total * 100) + '%';
-                    txt.textContent = `正在上傳第 ${cur}/${total} 張照片...`;
+                    txt.textContent = `正在上傳第 ${cur}/${total} 個檔案...`;
                 }
             );
             fill.style.width = '100%';
