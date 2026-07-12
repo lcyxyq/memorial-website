@@ -30,7 +30,7 @@ async function uploadPortrait() {
         name: '家屬',
         relation: '家人',
         message: '願父親在天之靈安息，我們永遠愛您、懷念您。',
-        photo_desc: '顯考李公諱宗文老先生遺像 — 民國四十二年二月十九日至民國一百一十四年六月十一日，享壽七十二歲。',
+        photo_desc: '顯考李公諱宗文老先生遺像 — 民國四十二年二月十九日至民國一百一十五年六月十一日，享壽七十四歲。',
         photo_url: photoUrl,
         storage_path: storagePath
     }]).select().single();
