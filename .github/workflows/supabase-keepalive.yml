@@ -1,0 +1,173 @@
+name: Supabase Keep-Alive
+
+# 目的：让 memorial-website 的 Supabase 免费项目保持活跃，避免「连续 7 天无活动被自动暂停」。
+#
+# 为什么需要：免费版项目连续 7 天无活动会被暂停，暂停后所有 API 返回 503，
+# 网站的留言 / 照片墙会直接失效（数据不会丢，但必须手动去 Dashboard 点 Resume）。
+# 本工作流每 3 天对数据库发起一次真实查询，把活跃计时器重置。
+
+on:
+  schedule:
+    # 每 3 天一次（UTC 03:17 = 北京时间 11:17）。避开整点，降低 GitHub 队列延迟影响。
+    - cron: "17 3 */3 * *"
+    # 每月 1 号额外跑一次（UTC 04:23 = 北京时间 12:23），用于提交心跳文件，见下方 heartbeat job。
+    - cron: "23 4 1 * *"
+  workflow_dispatch: # 支持手动触发（Actions 页面 → Run workflow）
+
+# 最小权限：ping job 只需要读
+permissions:
+  contents: read
+
+concurrency:
+  group: supabase-keepalive
+  cancel-in-progress: false
+
+jobs:
+  ping:
+    name: Ping Supabase database
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    env:
+      # 优先读取仓库 Variables（Settings → Secrets and variables → Actions → Variables），
+      # 未配置时回退到 js/supabase-config.js 里已经公开的同一组值 —— 所以开箱即用，无需任何配置。
+      # 注意：anon key 本来就会被前端产物公开，放 Variables 或写死都不构成额外泄露；
+      # 但 service_role key 绝对不能出现在这里。
+      SUPABASE_URL: ${{ vars.SUPABASE_URL || 'https://avxhoefkilkvsimiitaf.supabase.co' }}
+      SUPABASE_ANON_KEY: ${{ vars.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF2eGhvZWZraWxrdnNpbWlpdGFmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1NjUyODcsImV4cCI6MjA5NzE0MTI4N30.PWlRkfR1uWOmE11bQi5jPIS3jvk8G115rtdGruMCmn0' }}
+
+    steps:
+      - name: Query database (PostgREST)
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # 表名列表：任一成功即算保活成功。改成其它表名时同步更新这里。
+          TABLES=("photos" "comments")
+          REST="${SUPABASE_URL%/}/rest/v1"
+          MAX_ATTEMPTS=3
+          # 用 mktemp 而不是写死的 /tmp 路径，避免换执行环境后 curl 写不进去
+          BODY_FILE="$(mktemp)"
+          # 清理失败绝不能污染任务退出码（否则成功也会被标红）
+          trap 'rm -f "$BODY_FILE" >/dev/null 2>&1 || true' EXIT
+
+          if [ -z "${SUPABASE_URL:-}" ] || [ -z "${SUPABASE_ANON_KEY:-}" ]; then
+            echo "::error::SUPABASE_URL 或 SUPABASE_ANON_KEY 为空，无法探测。"
+            exit 1
+          fi
+
+          # 带鉴权的 GET/HEAD，脚本里不出现任何打印 key 的语句
+          authed() {
+            curl -sS --max-time 30 \
+              -H "apikey: ${SUPABASE_ANON_KEY}" \
+              -H "Authorization: Bearer ${SUPABASE_ANON_KEY}" "$@"
+          }
+
+          echo "项目: ${SUPABASE_URL}"
+          echo "时间: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          echo
+
+          ok=0
+          last_http="000"
+          last_body=""
+
+          for table in "${TABLES[@]}"; do
+            for attempt in $(seq 1 "$MAX_ATTEMPTS"); do
+              echo "--- 探测 ${table}（第 ${attempt}/${MAX_ATTEMPTS} 次）---"
+
+              # 取末尾 3 位数字作为状态码，curl 自身报错（如网络不通）时归零
+              raw=$(authed -H "Prefer: count=exact" -H "Range: 0-0" \
+                -o "$BODY_FILE" -w "%{http_code}" \
+                "${REST}/${table}?select=id&limit=1" 2>/dev/null || true)
+              http=$(printf '%s' "$raw" | grep -oE '[0-9]{3}$' | tail -1)
+              http=${http:-000}
+
+              last_http="$http"
+              last_body=$(cat "$BODY_FILE" 2>/dev/null || true)
+              echo "HTTP ${http} | 响应: $(printf '%s' "$last_body" | head -c 200)"
+
+              case "$http" in
+                200|206)
+                  # 206 是 Prefer: count=exact + Range 的正常返回，说明 Postgres 真的被查了
+                  total=$(authed -I -H "Prefer: count=exact" -H "Range: 0-0" \
+                    "${REST}/${table}?select=id&limit=1" 2>/dev/null \
+                    | tr -d '\r' | grep -i '^content-range:' | tail -1 \
+                    | awk -F'/' '{print $NF}' || true)
+                  echo "✅ 保活成功：${table} 查询通过，表内约 ${total:-未知} 行"
+                  ok=1
+                  break 2
+                  ;;
+                503)
+                  echo "⚠️ 项目疑似已被暂停（HTTP 503）"
+                  break 2
+                  ;;
+                401|403)
+                  echo "⚠️ 鉴权失败（HTTP ${http}）：anon key 可能已轮换或失效"
+                  break 2
+                  ;;
+                *)
+                  echo "第 ${attempt} 次未成功，等待 10 秒后重试…"
+                  sleep 10
+                  ;;
+              esac
+            done
+          done
+
+          {
+            echo "## Supabase Keep-Alive"
+            echo
+            echo "| 项目 | 值 |"
+            echo "|---|---|"
+            echo "| 探测地址 | \`${SUPABASE_URL}\` |"
+            echo "| 探测时间 | $(date -u '+%Y-%m-%d %H:%M:%S UTC') |"
+            echo "| 最终状态码 | \`${last_http}\` |"
+            echo "| 结果 | $([ "$ok" = "1" ] && echo '✅ 项目活跃' || echo '❌ 未通过') |"
+            echo
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$ok" != "1" ]; then
+            case "$last_http" in
+              503)
+                echo "::error::Supabase 项目已被暂停。请打开 https://supabase.com/dashboard 找到项目并点击 Resume（暂停后 1 年内均可恢复，数据不丢）。API 无法代劳，必须手动点一次。"
+                ;;
+              401|403)
+                echo "::error::anon key 鉴权失败，请核对 js/supabase-config.js 与仓库 Variables 中的 SUPABASE_ANON_KEY。"
+                ;;
+              *)
+                echo "::error::探测失败（最后状态码 ${last_http}），响应：$(printf '%s' "$last_body" | head -c 300)"
+                ;;
+            esac
+            exit 1
+          fi
+
+  heartbeat:
+    name: Repo heartbeat
+    # GitHub 在仓库连续 60 天无提交时会自动禁用 scheduled workflow。
+    # 这个 job 每月提交一个心跳文件，让定时器永不断掉。
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.schedule == '23 4 1 * *'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Commit heartbeat
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf 'last heartbeat: %s\n' "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" > .keepalive
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .keepalive
+          if git diff --cached --quiet; then
+            echo "心跳文件无变化，跳过提交"
+            exit 0
+          fi
+          git commit -m "chore: keepalive heartbeat [skip ci]"
+          # 显式指定 origin 与目标分支，不依赖本地 upstream 是否配置
+          git push origin "HEAD:${GITHUB_REF_NAME:-main}"
+          echo "✅ 已提交心跳，scheduled workflow 的 60 天计时器已重置"
